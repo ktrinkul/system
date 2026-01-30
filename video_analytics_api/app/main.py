@@ -1,14 +1,12 @@
 from fastapi import FastAPI
-from app.routers import scenario
-from app.routers import outbox
-from app.database import Base, engine
+from .services import create_scenario, get_scenario_status
 
 app = FastAPI()
 
-app.include_router(scenario.router)
-app.include_router(outbox.router)
+@app.post('/scenario/')
+async def create_new_scenario(data: dict):
+    return create_scenario(data)
 
-@app.on_event("startup")
-async def startup():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+@app.get('/scenario/{scenario_id}/status')
+async def status(scenario_id: int):
+    return get_scenario_status(scenario_id)
