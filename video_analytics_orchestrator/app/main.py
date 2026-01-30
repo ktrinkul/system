@@ -1,12 +1,12 @@
 from fastapi import FastAPI
-from app.database import engine, Base
-from app.routers import orchestrator
+from .services import initialize_scenario, update_scenario_status
 
-app = FastAPI(title="Orchestrator")
+app = FastAPI()
 
-app.include_router(orchestrator.router)
+@app.post('/scenario/')
+async def start_scenario():
+    return initialize_scenario()
 
-@app.on_event("startup")
-async def on_start():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+@app.post('/scenario/{scenario_id}/status')
+async def change_status(scenario_id: int, status: str):
+    return update_scenario_status(scenario_id, status)
