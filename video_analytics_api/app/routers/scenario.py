@@ -1,54 +1,37 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from app.database import SessionLocal
-from app import models, schemas
-from typing import List
+import json
+from fastapi import APIRouter, HTTPException
+from ..models import Scenario, ScenarioCreate, ScenarioUpdate
 
 router = APIRouter()
 
-async def get_db():
-    async with SessionLocal() as session:
-        yield session
-
-@router.post("/scenario/", response_model=schemas.ScenarioOut)
-async def create_scenario(scenario: schemas.ScenarioCreate, db: AsyncSession = Depends(get_db)):
-    new_scenario = models.Scenario(video_path=scenario.video_path)
-    db.add(new_scenario)
-    await db.flush()  # Чтобы получить ID нового сценария до коммита
-
-    # 📤 Добавляем событие в Outbox
-    outbox_event = models.OutboxEvent(
-        event_type="Scenario_ScenarioStatus.in_startup_processing",
-        payload={"scenario_id": new_scenario.id, "status": "in_startup_processing"},
-    )
-    db.add(outbox_event)
-
-    await db.commit()
-    await db.refresh(new_scenario)
+@router.post("/scenario/")
+async def create_scenario(scenario: ScenarioCreate):
+    """Create a new scenario."""
+    new_scenario = Scenario(**scenario.dict())
+    # Save scenario to database
     return new_scenario
 
-
-@router.post("/scenario/{scenario_id}/", response_model=schemas.ScenarioOut)
-async def update_scenario(scenario_id: int, update: schemas.ScenarioUpdate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(models.Scenario).where(models.Scenario.id == scenario_id))
-    scenario = result.scalar_one_or_none()
-    if scenario is None:
+@router.post("/scenario/{scenario_id}/status/")
+async def update_scenario_status(scenario_id: int, status: str):
+    """Update the status of a scenario."""
+    existing_scenario = get_scenario_by_id(scenario_id)
+    if existing_scenario is None:
         raise HTTPException(status_code=404, detail="Scenario not found")
-    scenario.status = update.status
-    await db.commit()
-    await db.refresh(scenario)
-    return scenario
+    # Validate and update status
+    if validate_status_transition(existing_scenario.status, status):
+        existing_scenario.status = status
+        # Update scenario in database
+        return existing_scenario
+    else:
+        raise HTTPException(status_code=400, detail="Invalid status transition")
 
-@router.get("/scenario/{scenario_id}/", response_model=schemas.ScenarioOut)
-async def get_scenario(scenario_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(models.Scenario).where(models.Scenario.id == scenario_id))
-    scenario = result.scalar_one_or_none()
-    if scenario is None:
-        raise HTTPException(status_code=404, detail="Scenario not found")
-    return scenario
-
-@router.get("/prediction/{scenario_id}/", response_model=List[schemas.PredictionOut])
-async def get_predictions(scenario_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(models.Prediction).where(models.Prediction.scenario_id == scenario_id))
-    return result.scalars().all()
+# Function to validate if the transition is allowed
+def validate_status_transition(current_status: str, new_status: str) -> bool:
+    """Check if the status transition is valid."""
+    valid_transitions = {
+        'init_startup': ['in_startup_processing', 'inactive'],
+        'in_startup_processing': ['active', 'init_shutdown'],
+        'active': ['init_shutdown'],
+        'init_shutdown': ['inactive'],
+    }
+    return new_status in valid_transitions.get(current_status, [])
