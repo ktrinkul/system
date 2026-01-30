@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/orch_db"
 
-engine = create_async_engine(DATABASE_URL, echo=True)
+engine = create_async_engine(DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 Base = declarative_base()
 
@@ -11,3 +11,4 @@ async def get_async_session():
     async with SessionLocal() as session:
         yield session
 
+# Optimization: Investigate potential query optimizations and introduce indexing where needed.
