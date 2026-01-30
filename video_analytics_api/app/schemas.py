@@ -1,30 +1,19 @@
-from pydantic import BaseModel
-from enum import Enum
-from typing import Optional, List, Dict
+import unittest
+from app.schemas import YourSchema
 
-class ScenarioStatus(str, Enum):
-    init_startup = "init_startup"
-    in_startup_processing = "in_startup_processing"
-    active = "active"
-    init_shutdown = "init_shutdown"
-    in_shutdown_processing = "in_shutdown_processing"
-    inactive = "inactive"
+class TestYourSchema(unittest.TestCase):
 
-class ScenarioCreate(BaseModel):
-    video_path: str
+    def test_valid_data(self):
+        valid_data = {...}
+        schema = YourSchema()
+        result = schema.load(valid_data)
+        self.assertEqual(result, valid_data)
 
-class ScenarioUpdate(BaseModel):
-    status: ScenarioStatus
+    def test_invalid_data(self):
+        invalid_data = {...}
+        schema = YourSchema()
+        with self.assertRaises(ValidationError):
+            schema.load(invalid_data)
 
-class ScenarioOut(BaseModel):
-    id: int
-    video_path: str
-    status: ScenarioStatus
-
-    class Config:
-        orm_mode = True
-
-class PredictionOut(BaseModel):
-    id: int
-    scenario_id: int
-    data: Dict
+if __name__ == '__main__':
+    unittest.main()
