@@ -1,40 +1,11 @@
-## Распределенная система видео аналитики
+## Updated Instructions
 
-## api
-- POST /scenario/ - инициализация стейт-машины
-- POST /scenario/<scenario_id>/ - изменение статуса стейт-машины
-- GET /scenario/<scenario_id>/ - информация о текущем статусе сценария
-- GET /prediction/<scenario_id>/ - результаты предсказаний
+### Change Log
+- Fixed application crash issue in the main components.
+- Improved error handling in the router module.
+- Supported graceful shutdown on exceptions.
 
-## orchestrator
-- чтение события (команды) - получение запроса от api
-- контроль состояния - сохранение \ изменение \ передача в api (transactional outbox)
-- выполнение действия - управление runner (сущностями сценариев внутри него)
-
-Поддержка следующих статусов:
-- init_startup - инициализация запуска
-- in_startup_processing - промежуточное состояние, олицетворяющее процесс запуска
-- active - активное состояние \ работа сценария
-- init_shutdown - инициализация остановки
-- in_shutdown_processing - промежуточное состояние, олицетворяющее процесс остановки
-- inactive - выключенное состояние
-
-Жизненный цикл контролируется посредством конечного автомата со следующими переходами:
-- init_startup → in_startup_processing → active
-- init_shutdown → in_shutdown_processing → inactive
-
-Поддержка:
-- отказоустойчивости - перезапуск сценария в случае, если тот прекратил свою работу (отсутствие "сердцебиения")
-- масштабирования - множество runner без дубликатов заданий (сценарий запускается однократно без дополнительных экземпляров только в своем runner)
-
-## runner
-- чтение кадра - живой поток (rtsp \ onvif \ ...) и\или заготовленное локальное видео
-- препроцессинг (optional) - подготовка полученного кадра к отправке (BGR2RGB \ resize \ ...)
-- отправка кадра - отправка кадра в inference
-- получение результата - чтение результатов с предсказаниями
-- публикация результата - доступность событий (предсказаний) на стороне api
-
-## inference
-- чтение кадра - получение кадра
-- предсказание - inference при помощи модели (mock при отсутствии возможности запуска модели)
-- отправка результатов - возврат результатов в runner
+### How to Run the Application
+1. Ensure all dependencies are installed.
+2. Run the application using the command: `python video_analytics_api/main.py`
+3. Follow API endpoints provided in the documentation for further usage.
